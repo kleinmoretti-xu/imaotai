@@ -1,7 +1,11 @@
 package com.xzc.imaotai.http;
 
 import com.github.lianjiatech.retrofit.spring.boot.core.RetrofitClient;
+import com.xzc.imaotai.util.SpringBeanUtil;
+import org.springframework.core.env.Environment;
+import org.springframework.util.StringUtils;
 import retrofit2.http.GET;
+import retrofit2.http.Header;
 import retrofit2.http.HeaderMap;
 import retrofit2.http.Path;
 
@@ -23,18 +27,30 @@ public interface IMaotaiHttpClient {
     );
 
     @GET("/mt-backend/xhr/front/mall/index/session/get/{timestamp}")
-    String getSessionId(@HeaderMap Map<String, String> headers, @Path("timestamp") String timestamp);
+    String getSessionId(@HeaderMap Map<String, String> headers,
+                        @Header("MT-APP-Version") String version,
+                        @Path("timestamp") String timestamp);
 
     default String getSessionId(String timestamp) {
-        return getSessionId(HEADERS, timestamp);
+        return getSessionId(HEADERS, getVersion(), timestamp);
     }
 
+    default String getVersion() {
+        Environment environment = SpringBeanUtil.getBean(Environment.class);
+        String version = environment.getProperty("imaotai.version");
+        return StringUtils.hasLength(version) ? version : "1.4.0";
+    }
 
     @GET("/mt-backend/xhr/front/mall/shop/list/slim/v3/{sessionId}/{province}/{itemId}/{timestamp}")
-    String getMallList(@HeaderMap Map<String, String> headers, @Path("sessionId") String sessionId, @Path("province") String province, @Path("itemId") String itemId, @Path("timestamp") String timestamp);
+    String getMallList(@HeaderMap Map<String, String> headers,
+                       @Header("MT-APP-Version") String version,
+                       @Path("sessionId") String sessionId,
+                       @Path("province") String province,
+                       @Path("itemId") String itemId,
+                       @Path("timestamp") String timestamp);
 
     default String getMallList(String sessionId, String province, String itemId, String timestamp) {
-        return getMallList(HEADERS, sessionId, province, itemId, timestamp);
+        return getMallList(HEADERS, getVersion(), sessionId, province, itemId, timestamp);
     }
 
 }
