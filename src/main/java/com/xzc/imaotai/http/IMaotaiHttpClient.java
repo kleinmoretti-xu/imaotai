@@ -1,15 +1,23 @@
 package com.xzc.imaotai.http;
 
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSONPath;
 import com.github.lianjiatech.retrofit.spring.boot.core.RetrofitClient;
 import com.xzc.imaotai.util.SpringBeanUtil;
+import okhttp3.ResponseBody;
 import org.springframework.core.env.Environment;
+import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StringUtils;
-import retrofit2.http.GET;
-import retrofit2.http.HeaderMap;
-import retrofit2.http.Path;
+import retrofit2.Call;
+import retrofit2.Response;
+import retrofit2.http.*;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * @author Klein Moretti
@@ -52,5 +60,33 @@ public interface IMaotaiHttpClient {
     default String getMallList(String sessionId, String province, String itemId, String timestamp) {
         return getMallList(getHeader(), sessionId, province, itemId, timestamp);
     }
+
+    @GET("/mt-backend/xhr/front/mall/resource/get")
+    String getMap(@HeaderMap Map<String, String> headers);
+
+    default String getMap() {
+        String map = getMap(getHeader());
+        JSONObject jsonObject = (JSONObject) JSONPath.read(map, "$.data.mtshops_pc");
+        StringBuffer str = new StringBuffer();
+        Optional.ofNullable(jsonObject).ifPresent(j -> {
+            String url = jsonObject.getString("url");
+            if (StringUtils.hasLength(url)) {
+                Call<ResponseBody> call = downloadFile(url);
+                try {
+                    Response<ResponseBody> response = call.execute();
+                    if (response.isSuccessful() && response.body() != null) {
+                        InputStream inputStream = response.body().byteStream();
+                        str.append(new String(FileCopyUtils.copyToByteArray(inputStream), StandardCharsets.UTF_8));
+                    }
+                } catch (IOException ignore) {
+                }
+            }
+        });
+        return str.toString();
+    }
+
+    @GET
+    @Streaming
+    Call<ResponseBody> downloadFile(@Url String url);
 
 }
